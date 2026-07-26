@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## v0.10.0 (2026-07-26)
+
+### Feat
+
+- **plugins**: add declarative agent plugin support (#75)
+- **models**: add Anthropic provider support (#74)
+- **event_publisher**: Include model data in AGENT_COMPLETE events (#71)
+
+### Fix
+
+- **renderers**: suppress empty ANSI renderer sections for whitespace-only events (#69)
+
 ## v0.9.0 (2026-06-22)
 
 ### Feat
