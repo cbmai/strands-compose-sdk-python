@@ -6,10 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## v0.11.0 (2026-08-15)
 
+### BREAKING CHANGE
+
+- Requires `strands-agents>=1.52.0`.
+- MCP is client-side only. Removed `mcp_servers:` and `server:` on MCP clients, plus `MCPServerDef`, `create_mcp_server`, and `MCPLifecycle`. A server is either spawned as a stdio subprocess (`command:`) or already running remotely (`url:`).
+- Removed `tool_labels:` on agents and the `tool_labels` argument on `EventPublisher` / `make_event_queue`. TOOL_START / TOOL_END events and the renderers now always report the real tool name.
+- `load()` is the single entry point. Removed `resolve_infra`, `ResolvedInfra`, and `load_session`; models and MCP clients are built per call, making every `load()` a fully isolated session. `strands-compose load` is now synchronous.
+- Delegate connections are wired through native `strands.Agent.as_tool` instead of a bespoke wrapper. `preserve_context: false` is rejected for a Swarm or Graph target, and rejected by strands for an agent with a session manager.
+
 ### Feat
 
 - drop self-hosted mcp servers and tool labels overwrite (#81)
 - **delegate**: wire agent connections through Agent.as_tool (#80)
+
+### Fix
+
+- **renderers**: render INTERRUPT events instead of dropping them silently
+- **tools**: load directory tool specs recursively, skipping `_`- and `.`-prefixed path segments
+- **orchestrations**: count a Swarm's or Graph's `entry_name` as a node reference so a nested orchestration used only as the entry is built before its parent
+- **mcp**: correct transport auto-detection for `url:`
+- **cli**: report the session provider in `check` for built-in providers
 
 ## v0.10.0 (2026-07-26)
 
