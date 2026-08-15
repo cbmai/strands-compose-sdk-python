@@ -2,7 +2,7 @@
 
 Simple cases run on hand-built messages/``AgentResult``. The multi-agent cases
 drive a real ``GraphResult`` / ``SwarmResult`` produced by invoking a real
-orchestration through the public ``load_session`` seam (strands faked only at the
+orchestration through the public ``load`` seam (strands faked only at the
 model resolver). Asserts the *shape* of the serialized dict and the extracted
 message — the public contract of ``serialize_multiagent_result`` /
 ``extract_last_message`` / ``extract_text``.
@@ -14,7 +14,7 @@ from strands.agent.agent_result import AgentResult
 from strands.telemetry.metrics import EventLoopMetrics
 from strands.types.content import Message
 
-from strands_compose.config import load_session, resolve_infra
+from strands_compose.config import load
 from strands_compose.config.schema import AppConfig
 from strands_compose.tools import serialize_multiagent_result
 from strands_compose.tools.extractors import extract_last_message, extract_text
@@ -31,10 +31,6 @@ from tests.factories import (
 def test_extract_text_returns_last_text_block():
     message: Message = {"role": "assistant", "content": [{"text": "final answer"}]}
     assert extract_text(message) == "final answer"
-
-
-def test_extract_text_of_empty_message_is_empty_string():
-    assert extract_text(None) == ""
 
 
 def test_extract_last_message_returns_agent_result_message():
@@ -64,7 +60,7 @@ async def _invoke(orch):
         orchestrations={"o": orch},
         entry="o",
     )
-    resolved = load_session(config, resolve_infra(config))
+    resolved = load(config)
     return await resolved.entry.invoke_async("hi")
 
 

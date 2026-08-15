@@ -2,12 +2,6 @@
 
 Provides helpers for loading ``@tool``-decorated functions from files, modules,
 and directories.
-
-Key Features:
-    - Auto-detection of filesystem vs. module-based tool specs
-    - Automatic @tool wrapping for explicit colon-spec lookups
-    - Directory scanning with underscore-prefixed file exclusion
-    - Unified spec resolver supporting files, modules, and directories
 """
 
 from __future__ import annotations
@@ -160,15 +154,15 @@ def load_tool_function(spec: str) -> AgentTool:
 
 
 def load_tools_from_directory(path: str | Path) -> list[AgentTool]:
-    """Load all @tool functions from .py files in a directory.
+    """Load all @tool functions from .py files in a directory tree.
 
-    Scans all .py files (excluding ``_``-prefixed) and loads their tools.
+    Scans recursively, skipping any path segment that starts with ``_`` or ``.``.
 
     Args:
         path: Directory path to scan.
 
     Returns:
-        List of AgentTool instances from all files in the directory.
+        List of AgentTool instances from every file in the tree.
 
     Raises:
         FileNotFoundError: If the directory does not exist.
@@ -181,9 +175,10 @@ def load_tools_from_directory(path: str | Path) -> list[AgentTool]:
         raise NotADirectoryError(f"Path is not a directory: {dir_path}")
 
     tools: list[AgentTool] = []
-    for py_file in sorted(dir_path.glob("*.py")):
-        if py_file.name.startswith("_"):
-            logger.debug("file=<%s> | skipping underscore-prefixed file", py_file.name)
+    for py_file in sorted(dir_path.rglob("*.py")):
+        relative = py_file.relative_to(dir_path)
+        if any(part.startswith(("_", ".")) for part in relative.parts):
+            logger.debug("file=<%s> | skipping private path segment", relative)
             continue
         loaded = load_tools_from_file(py_file)
         tools.extend(loaded)

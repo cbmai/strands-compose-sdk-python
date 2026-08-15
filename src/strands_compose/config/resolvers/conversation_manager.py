@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from strands.agent.conversation_manager import ConversationManager
 
+from ...exceptions import ConfigurationError
 from ...utils import load_object
 
 if TYPE_CHECKING:
@@ -21,9 +22,6 @@ def resolve_conversation_manager(cm_def: ConversationManagerDef) -> Conversation
       ``"strands.agent:SlidingWindowConversationManager"``)
     - ``"./path/to/file.py:ClassName"`` -- file-based import
 
-    No short-name aliases are supported.  Use the full import path so that
-    custom and third-party managers work without ambiguity.
-
     Args:
         cm_def: Conversation manager definition from YAML.
 
@@ -31,12 +29,12 @@ def resolve_conversation_manager(cm_def: ConversationManagerDef) -> Conversation
         Instantiated ConversationManager.
 
     Raises:
-        ValueError: If ``type`` is not in ``module:Class`` format.
+        ConfigurationError: If ``type`` is not in ``module:Class`` format.
         TypeError: If the resolved object is not a ConversationManager subclass.
     """
     type_str = cm_def.type
     if ":" not in type_str:
-        raise ValueError(
+        raise ConfigurationError(
             f"Conversation manager type {type_str!r} is not a valid import spec.\n"
             f"Use 'module.path:ClassName' (e.g. "
             f"'strands.agent:SlidingWindowConversationManager') "

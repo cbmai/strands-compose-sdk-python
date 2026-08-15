@@ -12,7 +12,6 @@ vars: {}              # Variable definitions (removed after interpolation)
 models: {}            # Named model definitions
 agents: {}            # Named agent definitions (required: at least one)
 orchestrations: {}    # Named orchestration definitions
-mcp_servers: {}       # Named MCP server definitions
 mcp_clients: {}       # Named MCP client connections
 session_manager: {}   # Global session manager
 entry: "name"         # Required: entry point agent or orchestration
@@ -43,7 +42,6 @@ agents:
     hooks: []                      # List of HookDef objects or import path strings
     plugins: []                    # List of PluginDef objects or import path strings
     mcp: []                        # List of MCP client names
-    tool_labels: {}                # Tool name -> display label mapping
     conversation_manager: null     # ConversationManagerDef
     session_manager: null          # Per-agent SessionManagerDef (overrides global)
 ```
@@ -93,23 +91,13 @@ conversation_manager:
   params: {}                       # Constructor kwargs (window_size, etc.)
 ```
 
-## MCPServerDef
-
-```yaml
-mcp_servers:
-  name:
-    type: ./server.py:create       # Factory function: module.path:func or ./file.py:func
-    params: {}                     # Forwarded to factory (port, host, etc.)
-```
-
 ## MCPClientDef
 
 ```yaml
 mcp_clients:
   name:
     # Exactly one of:
-    server: "server_name"          # Reference to mcp_servers entry
-    url: "https://..."             # External MCP server URL
+    url: "https://..."             # MCP server URL
     command: ["cmd", "arg"]        # Stdio subprocess command
 
     transport: null                # Override: "streamable-http" | "sse" | "stdio"
@@ -127,6 +115,7 @@ orchestrations:
     connections:
       - agent: "target_name"      # Agent or orchestration name
         description: "..."         # Tool description for LLM
+        preserve_context: true     # Keep delegate history between calls (default true)
     session_manager: null          # Override session manager
     hooks: []                      # Additional hooks
     agent_kwargs: {}               # Override agent kwargs (merged)
@@ -169,4 +158,4 @@ orchestrations:
 
 ---
 
-**Bonus**: [Quick Recipes →](Quick_Recipes.md)
+[Next: Chapter 19 — Plugins →](Chapter_19.md)

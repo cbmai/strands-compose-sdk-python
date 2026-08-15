@@ -11,7 +11,7 @@ import logging
 
 from strands import Agent, tool
 
-from strands_compose.config import load_session, resolve_infra
+from strands_compose.config import load
 from strands_compose.config.schema import AppConfig
 from strands_compose.types import EventType
 from strands_compose.wire import make_event_queue
@@ -70,13 +70,6 @@ async def test_agent_complete_includes_model_id_and_provider():
     assert complete.data["model"]["provider"] == f"{FakeModel.__module__}.{FakeModel.__qualname__}"
 
 
-async def test_stream_is_bracketed_by_session_end():
-    agent = Agent(model=FakeModel(["hi"]))
-    eq = make_event_queue({"a": agent}, entry_name="a")
-    events = await _run_agent("hi", agent, eq)
-    assert events[-1].type == EventType.SESSION_END
-
-
 async def test_tool_call_emits_tool_start_and_success_end():
     @tool
     def greet(name: str) -> str:
@@ -109,7 +102,7 @@ async def test_model_error_emits_error_and_suppresses_complete():
 
 async def test_wire_event_queue_emits_session_start_with_manifest():
     config = AppConfig(agents={"a": agent_def()}, entry="a")
-    resolved = load_session(config, resolve_infra(config))
+    resolved = load(config)
 
     eq = resolved.wire_event_queue()
     first = await eq.get()

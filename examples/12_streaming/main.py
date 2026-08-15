@@ -24,6 +24,8 @@ STARTER = "Analyse the impact of large language models on software engineering."
 
 async def _stream(prompt: str, entry, queue):
     """Invoke the entry agent and render the event stream."""
+    # Reset the queue so session_start/session_end fire cleanly on each turn.
+    queue.flush()
     result = None
 
     async def _invoke() -> None:
@@ -65,8 +67,6 @@ async def _main() -> None:
             print("\n" + 52 * "-" + "\n")
     except KeyboardInterrupt:
         print("\nGoodbye!")
-    finally:
-        resolved.mcp_lifecycle.stop()
 
 
 # ── entry point ───────────────────────────────────────────────────────────────
