@@ -1,0 +1,1 @@
+VPC บน GCP เป็น global ส่วน subnet เป็น regional

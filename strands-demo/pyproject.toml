@@ -1,0 +1,23 @@
+[project]
+name = "strands-demo"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "cardthp", email = "thanaphat20@outlook.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "strands-agents-tools>=0.8.6",
+    "strands-compose[ollama]",
+]
+
+[project.scripts]
+strands-demo = "strands_demo:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+strands-compose = { workspace = true }

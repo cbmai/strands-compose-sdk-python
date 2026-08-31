@@ -134,3 +134,8 @@ convention = "google"
 [tool.pyright]
 reportInvalidTypeForm = "none"
 extraPaths = ["src", "."]
+
+[tool.uv.workspace]
+members = [
+    "strands-demo",
+]

@@ -1,0 +1,57 @@
+# delegate agents
+
+models:
+  local:
+    provider: ollama
+    model_id: qwen3.5:4b
+    params:
+      host: http://localhost:11434
+
+x-guard: &guard
+  - type: strands_compose.hooks:MaxToolCallsGuard
+    params: { max_calls: 8 }
+
+agents:
+  researcher:
+    model: local
+    description: "Looks things up on the web and reads local files."
+    system_prompt: |
+      You gather facts. Use http_request for web pages, file_read for local files.
+      Reply with short bullet points only. No opinions.
+    tools:
+      - strands_tools.http_request
+      - strands_tools.file_read
+    hooks: *guard
+
+  notetaker:
+    model: local
+    description: "Saves notes to disk and lists what is saved."
+    system_prompt: |
+      You manage notes on disk.
+      Use save_note to write a note, list_notes to see what exists.
+      Reply with one short sentence confirming what you did.
+    tools:
+      - ./tools.py:save_note
+      - ./tools.py:list_notes
+    hooks: *guard
+
+  coordinator:
+    model: local
+    system_prompt: |
+      You are the team lead. You have no tools of your own — you delegate.
+      Use researcher to gather facts, notetaker to save something to disk.
+      Answer simple questions yourself without delegating.
+      Finish with a short summary of the result for the user.
+
+# agent (delegate) start with coordinator, then coordinator can delegate to researcher or notetaker
+orchestrations:
+  team:
+    mode: delegate
+    entry_name: coordinator
+    connections:
+      - agent: researcher
+        description: "Gather facts from the web or local files."
+      - agent: notetaker
+        description: "Save a note to disk, or list saved notes."
+
+entry: team     # match with orchestrations (multiple-agent) or agent (single-agent)

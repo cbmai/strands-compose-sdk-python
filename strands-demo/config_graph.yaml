@@ -1,0 +1,71 @@
+# graph agents — DAG ลำดับตายตัว เราเป็นคนกำหนดเส้นทาง ไม่ใช่ LLM
+#
+# ต่างจาก config_delegate.yaml (delegate) 3 ข้อ:
+#   1. ไม่มี coordinator  — ลำดับอยู่ที่ edges ในส่วน orchestrations ไม่ต้องมี agent มาตัดสินใจ
+#   2. ไม่ต้องมี description — description ใช้ตอน delegate เท่านั้น (เป็น tool desc ให้ coordinator เลือก)
+#                              graph ไม่มีใครต้องเลือก จึงไม่ถูกอ่าน
+#   3. graph ใช้ agent object ตัวเดิมเป็น node — ไม่ fork ใหม่เหมือน delegate
+
+models:
+  local:
+    provider: ollama
+    model_id: qwen3.5:4b
+    params:
+      host: http://localhost:11434
+
+x-guard: &guard
+  - type: strands_compose.hooks:MaxToolCallsGuard
+    params: { max_calls: 8 }
+
+agents:
+  researcher:
+    model: local
+    system_prompt: |
+      You gather facts for a note that will be saved by the next agent.
+      Use http_request for web pages, file_read for local files.
+      If the request needs no lookup, just restate the facts you were given.
+
+      Reply in exactly this shape and nothing else:
+      FILENAME: <a short kebab-case name ending in .md>
+      CONTENT:
+      - <fact>
+      - <fact>
+    tools:
+      - strands_tools.http_request
+      - strands_tools.file_read
+    hooks: *guard
+    agent_kwargs:
+      callback_handler: null    # ปิด stream print กันตอบซ้ำ (main_graph_full.py ไม่กระทบ
+                                # เพราะ wire_event_queue() เขียนทับ callback_handler ให้เองอยู่แล้ว)
+
+  notetaker:
+    model: local
+    system_prompt: |
+      You receive a block that contains FILENAME: and CONTENT: from the previous agent.
+      Call save_note once, using that FILENAME as `filename` and the lines
+      under CONTENT as `content`. Do not invent a different filename.
+      Then reply with one short sentence confirming what you saved.
+    tools:
+      - ./tools.py:save_note
+      - ./tools.py:list_notes
+    hooks: *guard
+    agent_kwargs:
+      callback_handler: null    # ปิด stream print กันตอบซ้ำ (main_graph_full.py ไม่กระทบ
+                                # เพราะ wire_event_queue() เขียนทับ callback_handler ให้เองอยู่แล้ว)
+
+# researcher → notetaker : notetaker ได้รันแน่นอน ไม่ขึ้นกับว่า model จะ "เลือก" เรียกไหม
+orchestrations:
+  pipeline:
+    mode: graph
+    entry_name: researcher          # node แรกที่รับ prompt ของ user
+    edges:
+      - { from: researcher, to: notetaker }
+      # condition ต้องเป็น "path:callable" ที่ compose import ได้ (ไม่ใช่ expression string)
+      # รับ GraphState คืน bool — false = ตัด branch นั้นทิ้ง
+      # - { from: researcher, to: notetaker, condition: ./conditions.py:has_facts }
+    node_timeout: 120.0             # ต่อ node
+    execution_timeout: 600.0        # ทั้ง graph
+    # max_node_executions: 10       # กันลูปเมื่อมี cycle
+    # reset_on_revisit: false       # true = ล้าง state ของ node เมื่อวนกลับมาซ้ำ (ใช้กับ cycle)
+
+entry: pipeline     # match with orchestrations (multiple-agent) or agent (single-agent)

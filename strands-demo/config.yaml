@@ -1,0 +1,49 @@
+# single agent
+
+models:
+  local:
+    provider: ollama
+    model_id: qwen3.5:4b
+    params:
+      host: http://localhost:11434
+
+agents:
+  assistant:
+    model: local
+    system_prompt: |
+      You are a concise assistant.
+
+      Answer directly from your own knowledge whenever you can.
+      Only use a tool when the request truly needs it:
+      - current_time: only when asked about the current date or time
+      - save_note: ONLY when the user explicitly asks to save or write a note
+      - list_notes: only when asked what notes exist
+      Never save a note unless asked. After a tool runs, reply to the user in text.
+    tools:
+      - ./tools.py
+      - strands_tools.http_request
+      - strands_tools.file_read
+    agent_kwargs:
+      callback_handler: null
+
+entry: assistant      # match with orchestrations (multiple-agent) or agent (single-agent)
+
+
+
+
+# #######################################################
+# # basic config
+# models:
+#   local:
+#     provider: ollama
+#     # model_id: llama3.2:3b
+#     model_id: qwen3.5:4b
+#     params:
+#       host: http://localhost:11434
+
+# agents:
+#   assistant:
+#     model: local
+#     system_prompt: "You are a concise assistant."
+
+# entry: assistant

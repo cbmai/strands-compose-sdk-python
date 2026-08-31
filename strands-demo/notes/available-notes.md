@@ -1,0 +1,4 @@
+- มีไฟล์โน้ต markdown ทั้งหมด 12 ไฟล์ในโปรเจคนี้
+- โน้ตอยู่ในโฟลเดอร์ ./notes/ ประกอบด้วย: delegate-test.md, gcp.md, graph-clean.md, graph-events.md, graph-run.md, graph-test.md, team-test.md
+- โน้ตหลักอยู่ที่ README.md และ step.md
+- โน้ตทดสอบและเอกสารประกอบมี stands-compose101.md, stands101.md

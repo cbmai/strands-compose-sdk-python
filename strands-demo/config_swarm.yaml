@@ -1,0 +1,124 @@
+# swarm agents — peer handoff ไม่มี coordinator ไม่มี edges
+#
+# ต่างจากอีก 2 โหมด:
+#   delegate  หัวหน้าแจกงาน ลูกน้องทำเสร็จส่งกลับโต๊ะหัวหน้า ลูกน้องคุยกันเองไม่ได้
+#   graph     edges กำหนดลำดับล่วงหน้า (เราเป็นคนสั่ง) ทุก node ได้รันแน่นอน
+#   swarm     ทำเสร็จแล้วเดินไปวางบนโต๊ะเพื่อนเอง — คนที่เพิ่งทำงานเสร็จคือคนตัดสินว่าใครต่อ
+#
+# strands ยัด tool ชื่อ handoff_to_agent(agent_name, message, context) ให้ทุก node เอง
+# ถ้า agent มี tool ชื่อนี้อยู่แล้ว -> ValueError ตอน build
+#
+# handoff_to_agent = "ผมทำเสร็จแล้ว คนต่อไปคือ X"  ไม่ใช่ "ช่วยเรียก X ให้ที"
+#   - มันแค่ปักธงไว้ แล้ว return ทันที ไม่ได้รัน X ตรงนั้น
+#   - swarm สลับคน "หลังจบ turn" ไม่ใช่ตอนเรียก tool
+#   - ธงเก็บได้คนเดียว เรียกซ้ำ = ทับของเดิม ตัวสุดท้ายชนะ
+
+models:
+  local:
+    provider: ollama
+    model_id: qwen3.5:4b
+    params:
+      host: http://localhost:11434
+      options:
+        # ⚠️ ollama default num_ctx = 4096 — พอสำหรับ delegate (~950) และ graph (~1600)
+        # แต่ swarm ยิงระดับหมื่น token ต่อ turn -> ล้น context แล้วหลุดเป็น "EOF (status -1)"
+        num_ctx: 16384
+
+x-guard: &guard
+  - type: strands_compose.hooks:MaxToolCallsGuard
+    params: { max_calls: 20 }
+    # ⚠️ ใน swarm ค่านี้เป็นโควตาทั้งฝูงรวมกัน ไม่ใช่ต่อ agent — ตั้งให้เผื่อทุกคนใช้ได้พอ
+
+x-quiet: &quiet
+  callback_handler: null
+
+agents:
+  # ── 1. หาข้อมูล ────────────────────────────────────────────────
+  researcher:
+    model: local
+    # description กลับมามีความหมายอีกครั้ง (graph ไม่อ่าน) —
+    # swarm ยัดเข้า context ให้เพื่อนอ่านว่า "Agent name: X. Agent description: ..."
+    description: "Gathers raw facts from the web or local files. Cannot write or save."
+    system_prompt: |
+      You gather raw facts. Use http_request for web pages, file_read for local files.
+      You CANNOT write reports and CANNOT save files.
+
+      Collect the facts, state them as short bullets, then call
+      handoff_to_agent(agent_name="writer", message="<the facts + what the user wanted>")
+
+      Call it EXACTLY ONCE. The tool returns "success" immediately but that does NOT
+      mean writer has finished — the swarm switches agents only after your turn ends.
+      After the tool returns, say nothing more and end your turn.
+
+      If the request needs no lookup at all, answer it yourself and do NOT hand off.
+    tools:
+      - strands_tools.http_request
+      - strands_tools.file_read
+    hooks: *guard
+    agent_kwargs: *quiet
+
+  # ── 2. เรียบเรียง ──────────────────────────────────────────────
+  writer:
+    model: local
+    description: "Turns raw facts into a short clean note. Cannot look things up or save."
+    system_prompt: |
+      You turn raw facts into a short clean note. You have no tools of your own.
+
+      Write the note in this exact shape:
+      FILENAME: <short kebab-case name ending in .md>
+      CONTENT:
+      - <line>
+      - <line>
+
+      Then call handoff_to_agent(agent_name="reviewer", message="<the note you wrote>")
+
+      Call it EXACTLY ONCE. "success" does not mean reviewer is done — the swarm
+      switches agents only after your turn ends. After the tool returns, say nothing more.
+    hooks: *guard
+    agent_kwargs: *quiet
+
+  # ── 3. ตรวจ — จุดที่มีทางแยกจริง ───────────────────────────────
+  reviewer:
+    model: local
+    description: "Checks a draft note for errors. Cannot look things up or save."
+    system_prompt: |
+      You check the draft note you were handed. You have no tools of your own.
+
+      Decide ONE of these, then stop talking:
+      - Draft is fine        -> handoff_to_agent(agent_name="notetaker", message="<the approved note>")
+      - Draft has a problem  -> handoff_to_agent(agent_name="writer", message="<what to fix>")
+
+      Be lenient. Only send it back if something is actually wrong.
+      Call handoff_to_agent EXACTLY ONCE, then say nothing more and end your turn.
+    hooks: *guard
+    agent_kwargs: *quiet
+
+  # ── 4. เซฟลงดิสก์ — ปลายทาง ────────────────────────────────────
+  notetaker:
+    model: local
+    description: "Saves notes to disk and lists what is saved. Cannot browse the web."
+    system_prompt: |
+      You manage notes on disk. Use save_note to write, list_notes to see what exists.
+      You receive a note containing FILENAME: and CONTENT: — save it with that exact filename.
+
+      You are the last step. Do NOT hand off to anyone.
+      After save_note runs, you MUST reply to the user in text with one short sentence
+      confirming what you saved. Never end your turn on a tool call.
+    tools:
+      - ./tools.py:save_note
+      - ./tools.py:list_notes
+    hooks: *guard
+    agent_kwargs: *quiet
+
+# ไม่มี edges — มีแค่ "ใครอยู่ในฝูง" กับ "ใครเริ่ม" เส้นทางตัดสินกันสด ๆ ตอนรัน
+orchestrations:
+  swarm_team:
+    mode: swarm
+    agents: [researcher, writer, reviewer, notetaker]
+    entry_name: researcher          # คนแรกที่รับ prompt ของ user
+    max_handoffs: 8                 # โยนได้กี่ครั้ง (เผื่อ reviewer โยนกลับ writer)
+    max_iterations: 8               # node ทำงานรวมกี่ครั้ง (นับ node_history เหมือนกัน)
+    node_timeout: 300.0             # swarm ยัด context เยอะกว่าโหมดอื่น -> 120s ไม่พอ
+    execution_timeout: 1800.0       # 4 ตัวเดินครบเส้นใช้เวลานาน
+
+entry: swarm_team   # match with orchestrations (multiple-agent) or agent (single-agent)

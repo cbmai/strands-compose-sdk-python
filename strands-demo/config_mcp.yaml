@@ -1,0 +1,51 @@
+# single agent + MCP — ยิงไปที่ MCP server ของคนอื่น ไม่ต้องตั้ง server เอง
+#
+# DeepWiki (https://mcp.deepwiki.com/mcp) เป็น public MCP server ที่ไม่ต้อง auth
+# ให้ tool สำหรับถามเรื่อง repo บน GitHub: read_wiki_structure / read_wiki_contents / ask_question
+#
+# ข้อควรรู้: prompt กับ argument ที่ agent ส่งเข้า tool จะไปถึงเครื่องของเจ้าของ server
+#    อย่าส่งอะไรที่เป็นความลับเข้า MCP server ของคนอื่น
+
+models:
+  local:
+    provider: ollama
+    model_id: qwen3.5:4b
+    params:
+      host: http://localhost:11434
+
+# mcp_clients เป็น namespace แยกจาก agents/orchestrations — ชื่อชนกันได้ไม่เป็นไร
+mcp_clients:
+  deepwiki:
+    url: https://mcp.deepwiki.com/mcp
+    transport: streamable-http     # เดาจาก url ได้ ใส่ไว้ให้ชัด
+    # transport_options:           # ถ้า server ต้อง auth ใส่ header ตรงนี้
+    #   headers:
+    #     Authorization: "Bearer ${MCP_TOKEN}"
+    params:
+      startup_timeout: 30          # ส่งต่อให้ strands MCPClient ตรง ๆ
+
+agents:
+  assistant:
+    model: local
+    system_prompt: |
+      You are a concise assistant.
+
+      Tools you have:
+      - current_time / save_note / list_notes : local tools, run inside this process
+      - read_wiki_structure / read_wiki_contents / ask_question : ask about a PUBLIC GitHub repo
+        (these run on someone else's server — they take repoName like "owner/repo")
+
+      Use ask_question when the user asks about a GitHub repository.
+      Answer directly from your own knowledge when no tool is needed.
+      After a tool runs, reply to the user in text. Never end your turn on a tool call.
+    tools:
+      - ./tools.py                 # tool ในโปรเซสเดียวกัน
+    mcp:
+      - deepwiki                   # tool จาก server ของคนอื่น
+    hooks:
+      - type: strands_compose.hooks:MaxToolCallsGuard
+        params: { max_calls: 5 }
+    agent_kwargs:
+      callback_handler: null
+
+entry: assistant
