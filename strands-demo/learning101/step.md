@@ -5,8 +5,9 @@ brew install uv
 cd your_project
 uv init strands-demo && cd ~/strands-demo
 uv add "strands-compose[ollama]"    # default is bedrock -> uv add "strands-compose"
+uv add "strands-compose[openai]"    # add for HuggingFace
 
-# Install ollama
+# Run with ollama (Option1 - Gernarel)
 brew install ollama
 brew services start ollama
 check at curl http://localhost:11434 -> you will see Ollama is running
@@ -15,6 +16,26 @@ brew services stop ollama
 ollama list
 ollama pull llama3.2:3b
 ollama pull qwen2.5:7b
+
+# Run with HuggingFace (Option2 - Using with MacOS)
+uv tool install mlx-lm
+uv tool install huggingface_hub
+   ## download model
+hf download Qwen/Qwen3-4B-MLX-4bit
+   ## test
+mlx_lm.generate --model Qwen/Qwen3-4B-MLX-4bit --prompt "Reply with exactly: pong" --max-tokens 20
+   ## open server (OpenAI-compatible)
+mlx_lm.server --model Qwen/Qwen3-4B-MLX-4bit --port 8080
+   ## check
+curl http://localhost:8080/v1/models
+
+   ## list model
+   mlx_lm.manage --scan --pattern MLX
+   ## stop
+   pkill -f mlx_lm.server
+   ## delete
+   hf cache rm model/Qwen/Qwen3-4B-MLX-4bit --dry-run
+
 
 # If run on this repo it will activate 'strands-compose' if you want to turnoff just run deactivate
 thanaphat@Cards-MacBook-Pro sdk-python %  source /Users/thanaphat/Documents/sdk-python/.venv/bin/activate

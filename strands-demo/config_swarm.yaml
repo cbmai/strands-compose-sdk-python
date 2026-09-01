@@ -14,20 +14,45 @@
 #   - ธงเก็บได้คนเดียว เรียกซ้ำ = ทับของเดิม ตัวสุดท้ายชนะ
 
 models:
+  #MLX (Apple Silicon) via hugging face (run with: `mlx_lm.server --model Qwen/Qwen3-4B-MLX-4bit --port 8080`)
+  local:
+    provider: openai
+    model_id: Qwen/Qwen3-4B-MLX-4bit
+    params:
+      client_args:
+        base_url: http://localhost:8080/v1
+        api_key: not-needed        # mlx_lm.server not need key but openai client need
+      params:
+        # mlx_lm.server default max_tokens = 512 -> finish_reason "length"
+        # swarm use many context + long tool call -> 512 not enough -> need to set manually
+        max_tokens: 4096
+        # extra_body = send field that not in the OpenAI spec through the SDK to the mlx_lm.server
+        extra_body:
+          chat_template_kwargs:
+            enable_thinking: false
+
+  # #Ollama
+  # local:
+  #   provider: ollama
+  #   model_id: qwen3.5:4b
+  #   params:
+  #     host: http://localhost:11434
+
   local:
     provider: ollama
     model_id: qwen3.5:4b
     params:
       host: http://localhost:11434
       options:
-        # ⚠️ ollama default num_ctx = 4096 — พอสำหรับ delegate (~950) และ graph (~1600)
-        # แต่ swarm ยิงระดับหมื่น token ต่อ turn -> ล้น context แล้วหลุดเป็น "EOF (status -1)"
+        # ollama default num_ctx = 4096 — ok for delegate (~950) and graph (~1600)
+        # but swarm using more over 10000+ token per turn -> context overflow lead to "EOF (status -1)"
         num_ctx: 16384
 
 x-guard: &guard
   - type: strands_compose.hooks:MaxToolCallsGuard
     params: { max_calls: 20 }
-    # ⚠️ ใน swarm ค่านี้เป็นโควตาทั้งฝูงรวมกัน ไม่ใช่ต่อ agent — ตั้งให้เผื่อทุกคนใช้ได้พอ
+    # ใน swarm ค่านี้เป็นโควตาทั้งฝูงรวมกัน ไม่ใช่ต่อ agent — ตั้งให้เผื่อทุกคนใช้ได้พอ
+  - ./hooks.py:HandoffOnce    # จบ turn ทันทีที่ handoff แล้ว — ไม่งั้นโมเดลเล็กเรียก handoff_to_agent ซ้ำ 10+ ครั้ง
 
 x-quiet: &quiet
   callback_handler: null
@@ -43,12 +68,14 @@ agents:
       You gather raw facts. Use http_request for web pages, file_read for local files.
       You CANNOT write reports and CANNOT save files.
 
-      Collect the facts, state them as short bullets, then call
-      handoff_to_agent(agent_name="writer", message="<the facts + what the user wanted>")
+      Keep the user's original wording and language. Never translate — if the user
+      wrote Thai, the facts you pass on stay in Thai.
 
-      Call it EXACTLY ONCE. The tool returns "success" immediately but that does NOT
-      mean writer has finished — the swarm switches agents only after your turn ends.
-      After the tool returns, say nothing more and end your turn.
+      Never answer in plain text. Always respond by CALLING the handoff_to_agent tool:
+        agent_name: writer
+        message:    the facts you gathered, plus the exact filename the user asked for
+
+      One tool call and your turn is over — you will not be asked again.
 
       If the request needs no lookup at all, answer it yourself and do NOT hand off.
     tools:
@@ -62,18 +89,21 @@ agents:
     model: local
     description: "Turns raw facts into a short clean note. Cannot look things up or save."
     system_prompt: |
-      You turn raw facts into a short clean note. You have no tools of your own.
+      You turn raw facts into a short clean note.
 
-      Write the note in this exact shape:
-      FILENAME: <short kebab-case name ending in .md>
-      CONTENT:
-      - <line>
-      - <line>
+      Keep the user's original wording and language. Never translate — if the facts
+      came in Thai, the note stays in Thai.
 
-      Then call handoff_to_agent(agent_name="reviewer", message="<the note you wrote>")
+      Never answer in plain text — a plain-text reply saves nothing and ends the whole
+      swarm. Always respond by CALLING the handoff_to_agent tool:
+        agent_name: reviewer
+        message:    the complete note, written as
+                      FILENAME: <the exact filename the user asked for>
+                      CONTENT:
+                      - <line>
+                      - <line>
 
-      Call it EXACTLY ONCE. "success" does not mean reviewer is done — the swarm
-      switches agents only after your turn ends. After the tool returns, say nothing more.
+      One tool call, then your turn is over.
     hooks: *guard
     agent_kwargs: *quiet
 
@@ -82,14 +112,19 @@ agents:
     model: local
     description: "Checks a draft note for errors. Cannot look things up or save."
     system_prompt: |
-      You check the draft note you were handed. You have no tools of your own.
+      You check the draft note you were handed.
 
-      Decide ONE of these, then stop talking:
-      - Draft is fine        -> handoff_to_agent(agent_name="notetaker", message="<the approved note>")
-      - Draft has a problem  -> handoff_to_agent(agent_name="writer", message="<what to fix>")
+      Never answer in plain text — a plain-text reply ends the whole swarm and nothing
+      gets saved. Always respond by CALLING the handoff_to_agent tool, and put the note
+      ITSELF in the message — never a description of the note:
+        Draft is fine        -> agent_name: notetaker
+                                message:    <paste the FILENAME line and every CONTENT
+                                             line exactly as you received them>
+        Draft has a problem  -> agent_name: writer
+                                message:    <say what to fix>
 
-      Be lenient. Only send it back if something is actually wrong.
-      Call handoff_to_agent EXACTLY ONCE, then say nothing more and end your turn.
+      Be lenient — send it back only if something is actually wrong.
+      Never drop the FILENAME line: notetaker needs it to save the file.
     hooks: *guard
     agent_kwargs: *quiet
 

@@ -1,4 +1,4 @@
-# graph agents — DAG ลำดับตายตัว เราเป็นคนกำหนดเส้นทาง ไม่ใช่ LLM
+# graph agents — DAG by order, define by user not LLM
 #
 # ต่างจาก config_delegate.yaml (delegate) 3 ข้อ:
 #   1. ไม่มี coordinator  — ลำดับอยู่ที่ edges ในส่วน orchestrations ไม่ต้องมี agent มาตัดสินใจ
@@ -7,11 +7,26 @@
 #   3. graph ใช้ agent object ตัวเดิมเป็น node — ไม่ fork ใหม่เหมือน delegate
 
 models:
+  #MLX (Apple Silicon) via hugging face (run with: `mlx_lm.server --model Qwen/Qwen3-4B-MLX-4bit --port 8080`)
   local:
-    provider: ollama
-    model_id: qwen3.5:4b
+    provider: openai
+    model_id: Qwen/Qwen3-4B-MLX-4bit
     params:
-      host: http://localhost:11434
+      client_args:
+        base_url: http://localhost:8080/v1
+        api_key: not-needed        # mlx_lm.server not need key but openai client need
+      params:
+        # extra_body = send field that not in the OpenAI spec through the SDK to the mlx_lm.server
+        extra_body:
+          chat_template_kwargs:
+            enable_thinking: false
+
+  # #Ollama
+  # local:
+  #   provider: ollama
+  #   model_id: qwen3.5:4b
+  #   params:
+  #     host: http://localhost:11434
 
 x-guard: &guard
   - type: strands_compose.hooks:MaxToolCallsGuard

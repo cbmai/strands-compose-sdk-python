@@ -9,7 +9,7 @@ authors = [
 requires-python = ">=3.11"
 dependencies = [
     "strands-agents-tools>=0.8.6",
-    "strands-compose[ollama]",
+    "strands-compose[ollama,openai]",
 ]
 
 [project.scripts]

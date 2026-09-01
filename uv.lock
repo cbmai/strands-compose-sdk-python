@@ -2771,13 +2771,13 @@ version = "0.1.0"
 source = { editable = "strands-demo" }
 dependencies = [
     { name = "strands-agents-tools" },
-    { name = "strands-compose", extra = ["ollama"] },
+    { name = "strands-compose", extra = ["ollama", "openai"] },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "strands-agents-tools", specifier = ">=0.8.6" },
-    { name = "strands-compose", extras = ["ollama"], editable = "." },
+    { name = "strands-compose", extras = ["ollama", "openai"], editable = "." },
 ]
 
 [[package]]
