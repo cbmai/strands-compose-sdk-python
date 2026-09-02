@@ -63,10 +63,10 @@ thanaphat@Cards-MacBook-Pro sdk-python %  source /Users/thanaphat/Documents/sdk-
 run $deactivate
 
 ## Issue2: AI models are slow to give answers
-      Cause1: รันครั้งแรกแล้วปล่อยทิ้งไว้ (ต่อให้รัน warmup ในครั้งแรกแล้ว)
+      TestCase1: รันครั้งแรกแล้วปล่อยทิ้งไว้ (ต่อให้รัน warmup ในครั้งแรกแล้ว)
       RAM 16 GB เต็ม; macOS เลยย้ายหน่วยความจำ 5-7 GB ของ mlx server ออกไปเก็บที่อื่น (บีบอัด + เขียนลงดิสก์) ตอนที่ไม่ได้ใช้งาน
       พอรันใหม่ มันต้องขนของทั้งหมดกลับเข้า RAM ก่อนถึงจะเริ่มคำนวณได้
-      Cause2: รันซ้ำทันที
+      TestCase2: รันซ้ำทันที
       ของยังอยู่ใน RAM ให้คำตอบได้ทันที
 
 
