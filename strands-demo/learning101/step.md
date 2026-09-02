@@ -27,6 +27,8 @@ hf download Qwen/Qwen3-4B-MLX-4bit
 mlx_lm.generate --model Qwen/Qwen3-4B-MLX-4bit --prompt "Reply with exactly: pong" --max-tokens 20
    ## open server (OpenAI-compatible)
 mlx_lm.server --model Qwen/Qwen3-4B-MLX-4bit --port 11534
+mlx_lm.server --model Qwen/Qwen3-4B-MLX-4bit --port 11534 --prompt-cache-size 1 --prompt-cache-bytes 384M
+
    ## check
 curl http://localhost:11534/v1/models
 
@@ -56,7 +58,7 @@ uv run python 1_main.py "จดโน้ตชื่อ gcp.md ว่า VPC บ
 uv run python 1_main.py "มีโน้ตอะไรบ้าง"
 
 
-# Issue
+# Issue when run with HuggingFace
 ## Issue1: If run on this repo it will activate 'strands-compose' if you want to turnoff just run deactivate
 thanaphat@Cards-MacBook-Pro sdk-python %  source /Users/thanaphat/Documents/sdk-python/.venv/bin/activate
 (strands-compose) thanaphat@Cards-MacBook-Pro sdk-python %
