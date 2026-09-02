@@ -1,19 +1,22 @@
-"""Graph multi-agent demo — DAG pipeline with fixed execution order."""
+"""Graph multi-agent — DAG pipeline with fixed execution order."""
 
-from __future__ import annotations
-
-# Case: multiple-agent (pipeline) with tools (graph agents)
-#
 # ต่างจาก main_delegate.py ตรงที่ resolved.entry เป็น strands.multiagent.graph.Graph ไม่ใช่ Agent ทำให้ไม่มี .messages 
 # และ debug loop แบบ delegate ใช้ไม่ได้ตรง ๆ แลกมาด้วย GraphResult ที่บอกได้ว่า node ไหนรันจริง ตามลำดับไหน
 
+from __future__ import annotations
+
 import sys
+import time
+
 from strands_compose import load
 
 PROMPT = sys.argv[1] if len(sys.argv) > 1 else "จดโน้ตชื่อ graph-test.md ว่า graph รันครบทุก node"
 
 resolved = load("config_graph.yaml")
+
+started = time.perf_counter()
 result = resolved.entry(PROMPT)         # send back GraphResult not text
+elapsed = time.perf_counter() - started
 
 # คำตอบต้องดึงจาก node ตัวท้าย result.results[last].result (Graph ไม่ได้คืน text ก้อนเดียวเหมือน Agent)
 last = result.execution_order[-1].node_id
@@ -44,3 +47,5 @@ for name, agent in resolved.agents.items():
 # 3) token รวมทั้ง graph — Graph นับให้ก้อนเดียว ไม่ต้องไล่บวกเองแบบ delegate
 print("\n--- total ---")
 print(f"{result.execution_count} nodes, {result.accumulated_usage['totalTokens']} tokens")
+
+print(f"\n--- time used ---\n{elapsed:.2f}s")

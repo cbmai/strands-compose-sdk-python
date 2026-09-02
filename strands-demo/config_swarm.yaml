@@ -14,13 +14,13 @@
 #   - ธงเก็บได้คนเดียว เรียกซ้ำ = ทับของเดิม ตัวสุดท้ายชนะ
 
 models:
-  #MLX (Apple Silicon) via hugging face (run with: `mlx_lm.server --model Qwen/Qwen3-4B-MLX-4bit --port 8080`)
+  #MLX (Apple Silicon) via hugging face (run with: `mlx_lm.server --model Qwen/Qwen3-4B-MLX-4bit --port 11534`)
   local:
     provider: openai
     model_id: Qwen/Qwen3-4B-MLX-4bit
     params:
       client_args:
-        base_url: http://localhost:8080/v1
+        base_url: http://localhost:11534/v1
         api_key: not-needed        # mlx_lm.server not need key but openai client need
       params:
         # mlx_lm.server default max_tokens = 512 -> finish_reason "length"

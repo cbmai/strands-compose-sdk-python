@@ -1,14 +1,13 @@
-"""Swarm multi-agent demo with full event streaming."""
+"""Swarm multi-agent demo with full event streaming. (It shows every event of each agent, including handoff events)"""
 
-from __future__ import annotations
-
-# Case: multiple-agent (swarm) with tools (peer handoff) - full event stream (see every event of each agent)
-#
 # โครงเดียวกับ main_graph_full.py เปลี่ยนแค่ชื่อ config
 # swarm เป็นโหมดเดียวที่ยิง event `handoff` ออกมา (delegate/graph ไม่มี)
 
+from __future__ import annotations
+
 import asyncio
 import sys
+import time
 
 from strands_compose import AnsiRenderer, load
 
@@ -29,15 +28,19 @@ async def main():
         renderer.flush()
 
     printer = asyncio.create_task(consume())
+    started = time.perf_counter()
     try:
         result = await resolved.entry.invoke_async(PROMPT)
     finally:
+        elapsed = time.perf_counter() - started
         await queue.close()
         await printer
 
     # print หลัง await printer เท่านั้น ไม่งั้น FINAL จะโผล่แทรกกลาง event ที่ยังค้างอยู่ใน queue
     print("\n=== FINAL ===\n", result.results[result.node_history[-1].node_id].result)
     print("\nhandoff path:", " -> ".join(n.node_id for n in result.node_history))
+
+    print(f"\n--- time used ---\n{elapsed:.2f}s")
 
 
 asyncio.run(main())

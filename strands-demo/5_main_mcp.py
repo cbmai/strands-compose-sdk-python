@@ -1,13 +1,12 @@
 """Single-agent demo with MCP — tools from an external MCP server over HTTP."""
 
-from __future__ import annotations
-
-# Case: single-agent + MCP (tool จาก MCP server ของคนอื่น ผ่าน HTTP)
-#
 # ต่างจาก main.py แค่ชื่อ config — resolved.entry ยังเป็น strands.Agent ตัวเดิม
 # ของที่เพิ่มมาคือ tool_names จะมีทั้ง tool ในโปรเซส (tools.py) และ tool จาก MCP server
 
+from __future__ import annotations
+
 import sys
+import time
 
 from strands_compose import load
 
@@ -20,7 +19,9 @@ resolved = load("config_mcp.yaml")
 print("tools:", ", ".join(sorted(resolved.entry.tool_names)))
 print()
 
+started = time.perf_counter()
 print(resolved.entry(PROMPT))
+elapsed = time.perf_counter() - started
 
 
 # --- debug only, can delete ---
@@ -29,3 +30,5 @@ for message in resolved.entry.messages:
     for block in message["content"]:
         if "toolUse" in block:
             print(f"-> {block['toolUse']['name']} {block['toolUse']['input']}")
+
+print(f"\n--- time used ---\n{elapsed:.2f}s")

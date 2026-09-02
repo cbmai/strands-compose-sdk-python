@@ -7,13 +7,13 @@
 #   3. graph ใช้ agent object ตัวเดิมเป็น node — ไม่ fork ใหม่เหมือน delegate
 
 models:
-  #MLX (Apple Silicon) via hugging face (run with: `mlx_lm.server --model Qwen/Qwen3-4B-MLX-4bit --port 8080`)
+  #MLX (Apple Silicon) via hugging face (run with: `mlx_lm.server --model Qwen/Qwen3-4B-MLX-4bit --port 11534`)
   local:
     provider: openai
     model_id: Qwen/Qwen3-4B-MLX-4bit
     params:
       client_args:
-        base_url: http://localhost:8080/v1
+        base_url: http://localhost:11534/v1
         api_key: not-needed        # mlx_lm.server not need key but openai client need
       params:
         # extra_body = send field that not in the OpenAI spec through the SDK to the mlx_lm.server

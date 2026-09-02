@@ -1,8 +1,9 @@
-# main_raw.py —  working like main.py but not using strands call Ollama directly with stdlib only (urllib + json)
-# run with uv run python main_raw.py "What time is it now?"
+"""Single-agent — load config and run a prompt with tools."""
+"""working like 1_main.py but not using strands call Ollama directly with stdlib only (urllib + json)"""
 
 import json
 import sys
+import time
 import urllib.error
 import urllib.request
 from datetime import datetime
@@ -148,4 +149,7 @@ def run(prompt: str) -> str:
 
 
 if __name__ == "__main__":
+    started = time.perf_counter()
     print(run(sys.argv[1] if len(sys.argv) > 1 else "What time is it now?"))
+
+    print(f"\n--- time used ---\n{time.perf_counter() - started:.2f}s")

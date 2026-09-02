@@ -1,19 +1,22 @@
-"""Swarm multi-agent demo — peer handoff without a coordinator."""
+"""Swarm multi-agent — peer handoff without a coordinator."""
 
-from __future__ import annotations
-
-# Case: multiple-agent (swarm) with tools (peer handoff)
-#
 # resolved.entry เป็น strands.multiagent.swarm.Swarm — ไม่มี .messages เหมือน Graph
 # ของที่ Swarm มีแต่ Graph ไม่มีคือ node_history: ใครถือ turn ต่อจากใคร (ซ้ำได้ วนกลับได้)
 
+from __future__ import annotations
+
 import sys
+import time
+
 from strands_compose import load
 
 PROMPT = sys.argv[1] if len(sys.argv) > 1 else "จดโน้ตชื่อ swarm-test.md ว่า swarm โยนงานกันเอง"
 
 resolved = load("config_swarm.yaml")
+
+started = time.perf_counter()
 result = resolved.entry(PROMPT)
+elapsed = time.perf_counter() - started
 
 # node_history ว่าง = swarm ล้มก่อนใครได้ทำงาน (เช่น node timeout) — ไม่งั้น [-1] จะ IndexError
 if not result.node_history:
@@ -51,3 +54,5 @@ for name, agent in resolved.agents.items():
 
 print("\n--- total ---")
 print(f"{len(result.node_history)} turns, {result.accumulated_usage['totalTokens']} tokens")
+
+print(f"\n--- time used ---\n{elapsed:.2f}s")

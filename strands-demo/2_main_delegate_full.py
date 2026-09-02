@@ -1,11 +1,10 @@
-"""Delegate multi-agent demo with full event streaming."""
+"""Delegate multi-agent with full event streaming. (It shows every event of each agent)"""
 
 from __future__ import annotations
 
-# Case: multiple-agent (delegate) with tools - full debug mode (see every event of each agent)
-
 import asyncio
 import sys
+import time
 
 from strands_compose import AnsiRenderer, load
 
@@ -26,12 +25,16 @@ async def main():
         renderer.flush()
 
     printer = asyncio.create_task(consume())
+    started = time.perf_counter()
     try:
         result = await resolved.entry.invoke_async(PROMPT)
         print("\n\n=== FINAL ===\n", result)
     finally:
+        elapsed = time.perf_counter() - started
         await queue.close()
         await printer
+
+    print(f"\n--- time used ---\n{elapsed:.2f}s")
 
 
 asyncio.run(main())
